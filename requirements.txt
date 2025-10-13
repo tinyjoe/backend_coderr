@@ -1,0 +1,17 @@
+asgiref==3.9.1
+certifi==2025.7.14
+Django==5.2.4
+django-cors-headers==4.7.0
+django-extensions==4.1
+django-filter==25.1
+djangorestframework==3.16.1
+dotenv==0.9.9
+numpy==2.3.1
+pyarrow==21.0.0
+pylance==0.31.1
+python-dateutil==2.9.0.post0
+python-dotenv==1.1.1
+pytz==2025.2
+six==1.17.0
+sqlparse==0.5.3
+tzdata==2025.2
