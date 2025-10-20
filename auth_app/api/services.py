@@ -16,3 +16,10 @@ def create_user(validated_data):
     CustomUser.objects.create(user=user, type=validated_data['type'])
     token, _ = Token.objects.get_or_create(user=user)
     return {'token': token.key, 'username': user.username, 'email': user.email, 'user_id': user.id}
+
+
+def authenticate_user(username, password):
+    user = User.objects.filter(username=username).first()
+    if user and user.check_password(password):
+        return user
+    return None
