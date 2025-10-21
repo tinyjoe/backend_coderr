@@ -5,7 +5,7 @@ from rest_framework.authtoken.views import ObtainAuthToken
 
 from auth_app.models import CustomUser
 
-from .serializers import UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer
+from .serializers import UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer, UserListSerializer
 from .handlers import get_registration_serializer, handle_registration_success, handle_invalid_credentials, handle_login_success
 from .services import authenticate_user
 
@@ -53,6 +53,20 @@ class UserProfileDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [AllowAny]
     serializer_class = UserProfileSerializer
 
-    def get_queryset(self):
-        print(CustomUser.objects.all())
-        return CustomUser.objects.all()
+
+class BusinessUserListView(generics.ListAPIView):
+    """
+    View for listing all Business Users.
+    """
+    queryset = CustomUser.objects.filter(type='business')
+    permission_classes = [AllowAny]
+    serializer_class = UserListSerializer
+
+
+class CustomerUserListView(generics.ListAPIView):
+    """
+    View for listing all Customer Users.
+    """
+    queryset = CustomUser.objects.filter(type='customer')
+    permission_classes = [AllowAny]
+    serializer_class = UserListSerializer

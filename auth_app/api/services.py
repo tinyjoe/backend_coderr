@@ -13,9 +13,9 @@ def create_user(validated_data):
     email = validated_data.pop('email')
     password = validated_data.pop('password')
     user = User.objects.create_user(username=username, email=email, password=password)
-    CustomUser.objects.create(user=user, type=validated_data['type'])
+    custom_user = CustomUser.objects.create(user=user, type=validated_data['type'])
     token, _ = Token.objects.get_or_create(user=user)
-    return {'token': token.key, 'username': user.username, 'email': user.email, 'user_id': user.id}
+    return {'token': token.key, 'username': user.username, 'email': user.email, 'user_id': custom_user.id}
 
 
 def authenticate_user(username, password):
