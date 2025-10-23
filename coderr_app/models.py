@@ -14,25 +14,26 @@ ORDER_STATUS_CHOICES = [
     ('cancelled', 'Cancelled'),
 ]
 
-
 class Offer(models.Model): 
     user = models.ForeignKey('auth_app.CustomUser', on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
-    image = models.ImageField(upload_to='offers/')
-    description = models.TextField()
+    image = models.ImageField(upload_to='offers/', blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    details = models.ManyToManyField('OfferDetail', blank=True)
-    min_price = models.IntegerField()
-    min_delivery_time = models.IntegerField()
+    min_price = models.IntegerField(blank=True, null=True)
+    min_delivery_time = models.IntegerField(blank=True, null=True)
 
 
 class OfferDetail(models.Model):
+    offer = models.ForeignKey(Offer, related_name='details', on_delete=models.CASCADE, null=True)
     title = models.CharField(max_length=255)
     revisions = models.IntegerField()
     delivery_time_in_days = models.IntegerField()
     price = models.IntegerField()
-    features = models.JSONField(default=list, blank=True)  
+    features = models.JSONField(default=list, blank=True)
+    offer_type = models.CharField(max_length=20, choices=OFFER_TYPE_CHOICES, default='basic')
+  
 
 
 class Order(models.Model): 
