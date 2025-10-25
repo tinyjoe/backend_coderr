@@ -7,6 +7,7 @@ django-filter==25.1
 djangorestframework==3.16.1
 dotenv==0.9.9
 numpy==2.3.1
+pillow==12.0.0
 pyarrow==21.0.0
 pylance==0.31.1
 python-dateutil==2.9.0.post0
