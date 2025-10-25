@@ -19,6 +19,9 @@ def create_user(validated_data):
 
 
 def authenticate_user(username, password):
+    """
+    Checks if the provided username and password match a user in the database and returns the user if authentication is successful.
+    """
     user = User.objects.filter(username=username).first()
     if user and user.check_password(password):
         return user
