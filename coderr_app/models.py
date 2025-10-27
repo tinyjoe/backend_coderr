@@ -35,16 +35,9 @@ class OfferDetail(models.Model):
     offer_type = models.CharField(max_length=20, choices=OFFER_TYPE_CHOICES, default='basic')
   
 
-
 class Order(models.Model): 
     customer_user = models.ForeignKey('auth_app.CustomUser', on_delete=models.CASCADE, related_name='customer_orders')
-    business_user = models.ForeignKey('auth_app.CustomUser', on_delete=models.CASCADE, related_name='business_orders')
-    title = models.CharField(max_length=255)
-    revisions = models.IntegerField()
-    delivery_time_in_days = models.IntegerField()
-    price = models.IntegerField()
-    features = models.JSONField(default=list, blank=True)
-    offer_type = models.CharField(max_length=10, choices=OFFER_TYPE_CHOICES)
+    offer_detail = models.ForeignKey(OfferDetail, on_delete=models.CASCADE, related_name='orders', null=True)
     status = models.CharField(max_length=15, choices=ORDER_STATUS_CHOICES, default='in_progress')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

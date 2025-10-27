@@ -1,12 +1,12 @@
-from rest_framework import generics, status, filters
+from rest_framework import generics, status, filters, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Min
 
-from coderr_app.models import Offer, OfferDetail
-from .serializers import OfferSerializer, SingleOfferDetailSerializer, OfferDetailSerializer
-from .permissions import IsBusinessUser
+from coderr_app.models import Offer, OfferDetail, Order, Review
+from .serializers import OfferSerializer, SingleOfferDetailSerializer, OfferDetailSerializer, OfferCreateUpdateSerializer, OrderListCreateSerializer, OrderDetailSerializer, ProgressOrderListSerializer, CompletedOrderListSerializer
+from .permissions import IsBusinessUser, IsAuthenticatedOrCustomerUser
 from .pagination import OfferPagination
 from .filters import OfferQueryHelper
 from .ordering import OfferOrderingHelper
@@ -18,7 +18,6 @@ class OfferListCreateView(generics.ListCreateAPIView):
     POST: Creates new instances of the Offer model with permission restrictions for business users.
     """
     queryset = Offer.objects.all()
-    serializer_class = OfferSerializer
     pagination_class = OfferPagination
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -26,6 +25,11 @@ class OfferListCreateView(generics.ListCreateAPIView):
     search_fields = ['title', 'description']
     ordering_fields = ['updated_at', 'details__price']
     ordering = ['-updated_at']
+
+    def get_serializer_class(self):
+        if self.request.method == 'PATCH' or self.request.method == 'POST':
+            return OfferCreateUpdateSerializer
+        return OfferSerializer
 
     def get_queryset(self):
         queryset = Offer.objects.all().prefetch_related('details', 'user')
@@ -66,4 +70,50 @@ class OfferDetailView(generics.RetrieveAPIView):
     """
     queryset = OfferDetail.objects.all()
     serializer_class = OfferDetailSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class OfferDetailViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for OfferDetail model to provide CRUD operations.
+    """
+    queryset = OfferDetail.objects.all()
+    serializer_class = OfferDetailSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'pk'
+
+
+class OrderView(generics.ListCreateAPIView):
+    """
+    View for listing and creating Orders.
+    """
+    queryset = Order.objects.all()
+    serializer_class = OrderListCreateSerializer
+    permission_classes = [IsAuthenticatedOrCustomerUser]
+
+
+class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    View for retrieving, updating, and deleting a single Order.
+    """
+    queryset = Order.objects.all()
+    serializer_class = OrderDetailSerializer
+    permission_classes = [IsAuthenticatedOrCustomerUser]
+
+
+class ProgressOrderListView(generics.ListAPIView):
+    """
+    View for listing Orders with status 'in_progress'.
+    """
+    queryset = Order.objects.filter(status='in_progress')
+    serializer_class = ProgressOrderListSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class CompletedOrderListView(generics.ListAPIView):
+    """
+    View for listing Orders with status 'completed'.
+    """
+    queryset = Order.objects.filter(status='completed')
+    serializer_class = CompletedOrderListSerializer
     permission_classes = [IsAuthenticated]
