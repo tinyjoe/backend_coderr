@@ -1,15 +1,16 @@
 from rest_framework import generics, status, filters, viewsets
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Min
+from django.db.models import Min, Avg
 
+from auth_app.models import CustomUser
 from coderr_app.models import Offer, OfferDetail, Order, Review
-from .serializers import OfferSerializer, SingleOfferDetailSerializer, OfferDetailSerializer, OfferCreateUpdateSerializer, OrderListCreateSerializer, OrderDetailSerializer, ProgressOrderListSerializer, CompletedOrderListSerializer
-from .permissions import IsBusinessUser, IsAuthenticatedOrCustomerUser
+from .serializers import OfferSerializer, SingleOfferDetailSerializer, OfferDetailSerializer, OfferCreateUpdateSerializer, OrderListCreateSerializer, OrderDetailSerializer, ProgressOrderListSerializer, CompletedOrderListSerializer, ReviewSerializer, ReviewDetailSerializer, BaseInfoSerializer
+from .permissions import IsBusinessUser, IsAuthenticatedOrCustomerUser, IsReviewAuthor
 from .pagination import OfferPagination
-from .filters import OfferQueryHelper
-from .ordering import OfferOrderingHelper
 
 
 class OfferListCreateView(generics.ListCreateAPIView):
@@ -30,14 +31,6 @@ class OfferListCreateView(generics.ListCreateAPIView):
         if self.request.method == 'PATCH' or self.request.method == 'POST':
             return OfferCreateUpdateSerializer
         return OfferSerializer
-
-    def get_queryset(self):
-        queryset = Offer.objects.all().prefetch_related('details', 'user')
-        queryset = OfferQueryHelper.add_annotations(queryset)
-        queryset = OfferQueryHelper.apply_filters(queryset, self.request.query_params)
-        ordering_param = self.request.query_params.get('ordering')
-        queryset = OfferOrderingHelper.apply_ordering(queryset, ordering_param)
-        return queryset
     
     def get_permissions(self):
         """
@@ -117,3 +110,41 @@ class CompletedOrderListView(generics.ListAPIView):
     queryset = Order.objects.filter(status='completed')
     serializer_class = CompletedOrderListSerializer
     permission_classes = [IsAuthenticated]
+
+
+class ReviewListCreateView(generics.ListCreateAPIView):
+    """
+    View for listing and creating Reviews.
+    """
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [IsAuthenticatedOrCustomerUser]
+    pagination_class = PageNumberPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['business_user_id', 'reviewer_id']
+    ordering_fields = ['updated_at', 'rating']
+
+
+class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    View for retrieving, updating, and deleting a single Review.
+    """
+    queryset = Review.objects.all()
+    serializer_class = ReviewDetailSerializer
+    permission_classes = [IsReviewAuthor]
+
+
+class BaseInfoView(APIView):
+    """
+    View for retrieving BaseInfo statistics.
+    """
+    serializer = BaseInfoSerializer
+    permission_classes = [AllowAny]
+    def get(self, request, *args, **kwargs):
+        data = {
+            "review_count": Review.objects.count(),
+            "average_rating": Review.objects.aggregate(Avg('rating'))['rating__avg'],
+            "business_profile_count": CustomUser.objects.filter(type='business').count(),
+            "offer_count": Offer.objects.count(),
+        }
+        return Response(data)

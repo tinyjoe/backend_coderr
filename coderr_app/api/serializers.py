@@ -141,3 +141,39 @@ class CompletedOrderListSerializer(serializers.ModelSerializer):
 
     def get_completed_order_count(self, obj):
         return Order.objects.filter(business_user=obj.business_user, status='completed').count()
+    
+
+class ReviewSerializer(serializers.ModelSerializer):
+    business_user = serializers.IntegerField(source='business_user.id', required=True)
+    reviewer = serializers.IntegerField(source='reviewer.id', read_only=True)
+    class Meta:
+        model = Review
+        fields = ['id', 'business_user', 'reviewer', 'rating', 'description', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        reviewer = request.user.customuser
+        business_user_id = validated_data['business_user']['id']
+        try:
+            business_user = CustomUser.objects.get(pk=business_user_id)
+        except CustomUser.DoesNotExist:
+            raise serializers.ValidationError({"business_user": "Business user not found."})
+        if business_user.type != 'business':
+            raise serializers.ValidationError({"business_user": "User is not a business user."})
+        review = Review.objects.create(business_user=business_user, reviewer=reviewer, rating=validated_data['rating'], description=validated_data['description'])
+        return review
+    
+
+class ReviewDetailSerializer(serializers.ModelSerializer):
+    business_user = serializers.IntegerField(source='business_user.id', read_only=True)
+    reviewer = serializers.IntegerField(source='reviewer.id', read_only=True)
+    class Meta:
+        model = Review
+        fields = ['id', 'business_user', 'reviewer', 'rating', 'description', 'created_at', 'updated_at']
+
+
+class BaseInfoSerializer(serializers.Serializer):
+    review_count = serializers.IntegerField()
+    average_rating = serializers.FloatField()
+    business_profile_count = serializers.IntegerField()
+    offer_count = serializers.IntegerField()

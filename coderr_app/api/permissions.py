@@ -32,3 +32,11 @@ class IsAuthenticatedOrCustomerUser(permissions.BasePermission):
         if request.method == 'DELETE':
             return request.user.is_staff
         return True
+    
+
+class IsReviewAuthor(permissions.BasePermission):
+    """
+    Allows access only to the author of the review.
+    """
+    def has_object_permission(self, request, view, obj):
+        return obj.reviewer == request.user.customuser
