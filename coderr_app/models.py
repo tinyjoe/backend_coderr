@@ -37,6 +37,7 @@ class OfferDetail(models.Model):
 
 class Order(models.Model): 
     customer_user = models.ForeignKey('auth_app.CustomUser', on_delete=models.CASCADE, related_name='customer_orders')
+    business_user = models.ForeignKey('auth_app.CustomUser', on_delete=models.CASCADE, related_name='business_orders', null=True)
     offer_detail = models.ForeignKey(OfferDetail, on_delete=models.CASCADE, related_name='orders', null=True)
     status = models.CharField(max_length=15, choices=ORDER_STATUS_CHOICES, default='in_progress')
     created_at = models.DateTimeField(auto_now_add=True)

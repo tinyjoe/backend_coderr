@@ -1,20 +1,20 @@
 from django.urls import path, include
 from rest_framework import routers
 
-from .views import OfferListCreateView, SingleOfferDetailView, OfferDetailView, OfferDetailViewSet, OrderView, OrderDetailView, ProgressOrderListView, CompletedOrderListView, ReviewListCreateView, ReviewDetailView, BaseInfoView
+from .views import OfferListCreateView, SingleOfferView, OfferDetailView, OfferDetailViewSet, OrderView, OrderDetailView, InProgressOrderCountView, CompletedOrderCountView, ReviewListCreateView, ReviewDetailView, BaseInfoView
 
 router = routers.DefaultRouter()
 router.register(r'offerdetails', OfferDetailViewSet, basename='offerdetail')
 
 urlpatterns = [
     path('offers/', OfferListCreateView.as_view(), name='offer-list'),
-    path('offers/<int:pk>/', SingleOfferDetailView.as_view(), name='offer-detail'),
+    path('offers/<int:pk>/', SingleOfferView.as_view(), name='offer-detail'),
     path('offerdetails/<int:pk>/', OfferDetailView.as_view(), name='offerdetail-detail'),
     path('', include(router.urls)),
     path('orders/', OrderView.as_view(), name='order-list'),
     path('orders/<int:pk>/', OrderDetailView.as_view(), name='order-detail'),
-    path('order-count/<int:pk>/', ProgressOrderListView.as_view(), name='progress-order-list'),
-    path('completed-order-count/<int:pk>/', CompletedOrderListView.as_view(), name='completed-order-list'),
+    path('order-count/<int:pk>/', InProgressOrderCountView.as_view(), name='progress-order-list'),
+    path('completed-order-count/<int:pk>/', CompletedOrderCountView.as_view(), name='completed-order-list'),
     path('reviews/', ReviewListCreateView.as_view(), name='review-list-create'),
     path('reviews/<int:pk>/', ReviewDetailView.as_view(), name='review-detail'),
     path('base-info/', BaseInfoView.as_view(), name='base-info')

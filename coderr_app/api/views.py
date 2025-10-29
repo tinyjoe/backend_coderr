@@ -8,7 +8,7 @@ from django.db.models import Min, Avg
 
 from auth_app.models import CustomUser
 from coderr_app.models import Offer, OfferDetail, Order, Review
-from .serializers import OfferSerializer, SingleOfferDetailSerializer, OfferDetailSerializer, OfferCreateUpdateSerializer, OrderListCreateSerializer, OrderDetailSerializer, ProgressOrderListSerializer, CompletedOrderListSerializer, ReviewSerializer, ReviewDetailSerializer, BaseInfoSerializer
+from .serializers import OfferListSerializer, SingleOfferSerializer, OfferDetailSerializer, OfferCreateUpdateSerializer, OrderListCreateSerializer, OrderDetailSerializer, InProgressOrderCountSerializer, CompletedOrderCountSerializer, ReviewSerializer, ReviewDetailSerializer, BaseInfoSerializer
 from .permissions import IsBusinessUser, IsAuthenticatedOrCustomerUser, IsReviewAuthor
 from .pagination import OfferPagination
 
@@ -28,9 +28,9 @@ class OfferListCreateView(generics.ListCreateAPIView):
     ordering = ['-updated_at']
 
     def get_serializer_class(self):
-        if self.request.method == 'PATCH' or self.request.method == 'POST':
+        if self.request.method == 'POST':
             return OfferCreateUpdateSerializer
-        return OfferSerializer
+        return OfferListSerializer
     
     def get_permissions(self):
         """
@@ -48,13 +48,18 @@ class OfferListCreateView(generics.ListCreateAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)   
 
 
-class SingleOfferDetailView(generics.RetrieveUpdateDestroyAPIView):
+class SingleOfferView(generics.RetrieveUpdateDestroyAPIView):
     """
     View for retrieving a single Offer with its details.
     """
     queryset = Offer.objects.all()
-    serializer_class = SingleOfferDetailSerializer
+    serializer_class = SingleOfferSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method == 'PATCH':
+            return OfferCreateUpdateSerializer
+        return SingleOfferSerializer
 
 
 class OfferDetailView(generics.RetrieveAPIView):
@@ -94,22 +99,26 @@ class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticatedOrCustomerUser]
 
 
-class ProgressOrderListView(generics.ListAPIView):
+class InProgressOrderCountView(generics.ListAPIView):
     """
-    View for listing Orders with status 'in_progress'.
+    View for counting Orders with status 'in_progress'.
     """
-    queryset = Order.objects.filter(status='in_progress')
-    serializer_class = ProgressOrderListSerializer
     permission_classes = [IsAuthenticated]
+    def get(self, request, *args, **kwargs):
+        count = Order.objects.filter(status='in_progress').count()
+        serializer = InProgressOrderCountSerializer({'order_count': count})
+        return Response(serializer.data)
 
 
-class CompletedOrderListView(generics.ListAPIView):
+class CompletedOrderCountView(generics.ListAPIView):
     """
-    View for listing Orders with status 'completed'.
+    View for counting Orders with status 'completed'.
     """
-    queryset = Order.objects.filter(status='completed')
-    serializer_class = CompletedOrderListSerializer
     permission_classes = [IsAuthenticated]
+    def get(self, request, *args, **kwargs):
+        count = Order.objects.filter(status='completed').count()
+        serializer = CompletedOrderCountSerializer({'completed_order_count': count})
+        return Response(serializer.data)
 
 
 class ReviewListCreateView(generics.ListCreateAPIView):

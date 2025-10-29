@@ -21,7 +21,7 @@ class NestedOfferDetailSerializer(serializers.HyperlinkedModelSerializer):
         return f"/offerdetails/{obj.pk}/"
 
 
-class UserShortSerializer(serializers.ModelSerializer):
+class UserShortInfoSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name', read_only=True)
     last_name = serializers.CharField(source='user.last_name', read_only=True)
     username = serializers.CharField(source='user.username', read_only=True)
@@ -30,16 +30,11 @@ class UserShortSerializer(serializers.ModelSerializer):
         fields = ["first_name", "last_name", "username"]
 
 
-class OfferDetailCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OfferDetail
-        fields = ['id', 'title', 'revisions', 'delivery_time_in_days', 'price', 'features', 'offer_type']
-
-class OfferSerializer(serializers.ModelSerializer):
+class OfferListSerializer(serializers.ModelSerializer):
     details = NestedOfferDetailSerializer(many=True, read_only=True)
     min_price = serializers.SerializerMethodField()
     min_delivery_time = serializers.SerializerMethodField()
-    user_details = UserShortSerializer(source="user", read_only=True)
+    user_details = UserShortInfoSerializer(source="user", read_only=True)
     class Meta:
         model = Offer
         fields = ['id', 'user', 'title', 'image', 'description', 'created_at', 'updated_at', 'details', 'min_price', 'min_delivery_time', 'user_details']
@@ -74,7 +69,7 @@ class OfferCreateUpdateSerializer(serializers.ModelSerializer):
         return offer
 
 
-class SingleOfferDetailSerializer(serializers.ModelSerializer):
+class SingleOfferSerializer(serializers.ModelSerializer):
     details = NestedOfferDetailSerializer(many=True, read_only=True)
     class Meta:
         model = Offer 
@@ -121,26 +116,12 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'customer_user', 'business_user', 'title', 'revisions', 'delivery_time_in_days', 'price', 'features', 'offer_type', 'status', 'created_at', 'updated_at']
 
 
-class ProgressOrderListSerializer(serializers.ModelSerializer):
-    order_count = serializers.SerializerMethodField()
-    business_user_id = serializers.IntegerField(write_only=True)
-    class Meta:
-        model = Order
-        fields = ['order_count', 'business_user_id']
-
-    def get_order_count(self, obj):
-        business = obj.business_user_id
-        return Order.objects.filter(business_user=business, status='in_progress').count()
+class InProgressOrderCountSerializer(serializers.Serializer):
+    order_count = serializers.IntegerField()
     
-
-class CompletedOrderListSerializer(serializers.ModelSerializer):
-    completed_order_count = serializers.SerializerMethodField()
-    class Meta:
-        model = Order
-        fields = ['completed_order_count']
-
-    def get_completed_order_count(self, obj):
-        return Order.objects.filter(business_user=obj.business_user, status='completed').count()
+    
+class CompletedOrderCountSerializer(serializers.Serializer):
+    completed_order_count = serializers.IntegerField()
     
 
 class ReviewSerializer(serializers.ModelSerializer):
