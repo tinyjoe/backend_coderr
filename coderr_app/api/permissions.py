@@ -3,10 +3,33 @@ from rest_framework import permissions
 
 class IsBusinessUser(permissions.BasePermission):
     """
-    Allows access only to users of type 'business'.
+    Permissions: Only users of type 'business'.
     """
     def has_permission(self, request, view):
         return (request.user and request.user.is_authenticated and request.user.customuser.type == 'business')
+    
+
+class IsAuthenticatedOrCreatorOfOffer(permissions.BasePermission):
+    """
+    Permissions:
+    GET: Any authenticated user.
+    POST: Only users of type 'business'.
+    PATCH/DELETE: Only the creator of the offer.
+    """
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if request.method == 'GET':
+            return True
+        if request.method == 'POST':
+            if hasattr(request.user, 'customuser') and getattr(request.user.customuser, 'type', None) == 'business':
+                return True
+        return True 
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in ['PATCH', 'DELETE']:
+            return obj.user == request.user
+        return True
     
 
 class IsAuthenticatedOrCustomerUser(permissions.BasePermission):

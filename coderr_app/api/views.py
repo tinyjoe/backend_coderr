@@ -2,6 +2,7 @@ from rest_framework import generics, status, filters, viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.exceptions import NotAuthenticated, NotFound, PermissionDenied
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Min, Avg
@@ -9,8 +10,9 @@ from django.db.models import Min, Avg
 from auth_app.models import CustomUser
 from coderr_app.models import Offer, OfferDetail, Order, Review
 from .serializers import OfferListSerializer, SingleOfferSerializer, OfferDetailSerializer, OfferCreateUpdateSerializer, OrderListCreateSerializer, OrderDetailSerializer, InProgressOrderCountSerializer, CompletedOrderCountSerializer, ReviewSerializer, ReviewDetailSerializer, BaseInfoSerializer
-from .permissions import IsBusinessUser, IsAuthenticatedOrCustomerUser, IsReviewAuthor
+from .permissions import IsBusinessUser, IsAuthenticatedOrCustomerUser, IsReviewAuthor, IsAuthenticatedOrCreatorOfOffer
 from .pagination import OfferPagination
+from .handlers import handle_delete_review_permission_denied, handle_unauthenticated_access, handle_create_review_success, handle_create_review_failure, handle_unauthenticated_review_access, handle_permission_denied_review, handle_update_review_success, handle_update_review_failure, handle_update_review_permission_denied, handle_review_not_found, handle_delete_review_success, handle_create_order_success, handle_create_order_permission_denied, handle_offer_detail_not_found, handle_create_order_failure
 
 
 class OfferListCreateView(generics.ListCreateAPIView):
@@ -20,7 +22,6 @@ class OfferListCreateView(generics.ListCreateAPIView):
     """
     queryset = Offer.objects.all()
     pagination_class = OfferPagination
-    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['user']  
     search_fields = ['title', 'description']
@@ -54,7 +55,7 @@ class SingleOfferView(generics.RetrieveUpdateDestroyAPIView):
     """
     queryset = Offer.objects.all()
     serializer_class = SingleOfferSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrCreatorOfOffer]
 
     def get_serializer_class(self):
         if self.request.method == 'PATCH':
@@ -88,6 +89,32 @@ class OrderView(generics.ListCreateAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderListCreateSerializer
     permission_classes = [IsAuthenticatedOrCustomerUser]
+
+    def get(self, request, *args, **kwargs):
+        """GET handler for retrieving orders."""
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        except NotAuthenticated:
+            return handle_unauthenticated_access(self)
+        
+    def post(self, request, *args, **kwargs):
+        """POST handler for creating a new order."""
+        user = request.user
+        if not user.is_authenticated:
+            return handle_unauthenticated_access(self)
+        try:
+            serializer = self.get_serializer(data=request.data, context={'request': request})
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            return handle_create_order_success(self, serializer)
+        except PermissionDenied:
+            return handle_create_order_permission_denied(self)
+        except request.data.order_detail_id.DoesNotExist:
+            return handle_offer_detail_not_found(self)
+        except Exception:
+            return handle_create_order_failure(self)
 
 
 class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -133,6 +160,29 @@ class ReviewListCreateView(generics.ListCreateAPIView):
     filterset_fields = ['business_user_id', 'reviewer_id']
     ordering_fields = ['updated_at', 'rating']
 
+    def get(self, request, *args, **kwargs):
+        """GET handler for retrieving reviews."""
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        except NotAuthenticated:
+            return handle_unauthenticated_access(self)
+        
+    def post(self, request, *args, **kwargs):
+        """POST handler for creating a new review."""
+        user = request.user
+        if not user.is_authenticated:
+            return handle_unauthenticated_review_access(self)
+        if user.type == 'business':
+            return handle_permission_denied_review(self)
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            self.perform_create(serializer)
+            return handle_create_review_success(self, serializer)
+        else:
+            return handle_create_review_failure(self)
+
 
 class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
@@ -141,6 +191,36 @@ class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Review.objects.all()
     serializer_class = ReviewDetailSerializer
     permission_classes = [IsReviewAuthor]
+
+    def patch(self, request, *args, **kwargs):
+        """PATCH handler for updating a review."""
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=True, context={'request': request})
+            if serializer.is_valid():
+                self.perform_update(serializer)
+                return handle_update_review_success(self, serializer)
+        except NotFound:
+            return handle_review_not_found(self)
+        except NotAuthenticated:
+            return handle_unauthenticated_access(self)
+        except PermissionDenied:
+            return handle_update_review_permission_denied(self)
+        else:
+            return handle_update_review_failure(self)
+        
+    def delete(self, request, *args, **kwargs):
+        """DELETE handler for deleting a review."""
+        try:
+            instance = self.get_object()
+            self.perform_destroy(instance)
+            return handle_delete_review_success(self)
+        except NotFound:
+            return handle_review_not_found(self)
+        except NotAuthenticated:
+            return handle_unauthenticated_access(self)
+        except PermissionDenied:
+            return handle_delete_review_permission_denied(self)
 
 
 class BaseInfoView(APIView):

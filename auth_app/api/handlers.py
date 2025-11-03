@@ -1,6 +1,3 @@
-
-from django.contrib.auth.models import User
-
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -29,7 +26,7 @@ def handle_login_success(self, user):
     data = {'token': token.key, 'username': user.username, 'email': user.email, 'user_id': user.id}
     return Response(data, status=status.HTTP_200_OK)
 
-def handle_unathenticated_access(self):
+def handle_unauthenticated_access(self):
     """Called when an unauthenticated user tries to access a protected resource."""
     message = 'Benutzer ist nicht authentifiziert.'
     return Response({'error': message}, status=status.HTTP_401_UNAUTHORIZED)
