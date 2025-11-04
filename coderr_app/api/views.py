@@ -23,9 +23,9 @@ class OfferListCreateView(generics.ListCreateAPIView):
     queryset = Offer.objects.all()
     pagination_class = OfferPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['user']  
+    filterset_fields = ['user', 'min_price', 'min_delivery_time']  
     search_fields = ['title', 'description']
-    ordering_fields = ['updated_at', 'details__price']
+    ordering_fields = ['updated_at', 'min_price']
     ordering = ['-updated_at']
 
     def get_serializer_class(self):
@@ -174,7 +174,7 @@ class ReviewListCreateView(generics.ListCreateAPIView):
         user = request.user
         if not user.is_authenticated:
             return handle_unauthenticated_review_access(self)
-        if user.type == 'business':
+        if hasattr(user, 'customuser') and user.customuser.type == 'business':
             return handle_permission_denied_review(self)
         serializer = self.get_serializer(data=request.data, context={'request': request})
         if serializer.is_valid():

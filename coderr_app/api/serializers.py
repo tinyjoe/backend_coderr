@@ -1,14 +1,22 @@
+from urllib import request
 from django.db import models
 from rest_framework import serializers
 
 from auth_app.models import CustomUser
 from coderr_app.models import Offer, OfferDetail, Order, Review
+from .services import update_offer_detail, validate_details
 
 
 class OfferDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = OfferDetail
         fields = ['id', 'title', 'revisions', 'delivery_time_in_days', 'price', 'features', 'offer_type']
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
 
 
 class NestedOfferDetailSerializer(serializers.HyperlinkedModelSerializer):
@@ -51,22 +59,28 @@ class OfferCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Offer
         fields = ['id', 'title', 'image', 'description', 'details']
-
-    def validate_details(self, value):
-        if not isinstance(value, list):
-            raise serializers.ValidationError('Details need to be a list of OfferDetail objects.')
-        if len(value) != 3:
-            raise serializers.ValidationError('An offer must contain exactly 3 details.')
-        return value
+        extra_kwargs = {'offer_type': {'required': True}}
 
     def create(self, validated_data):
         details_data = validated_data.pop('details')
+        validate_details(self, details_data)
         user = self.context['request'].user
         custom_user = user.customuser
         offer = Offer.objects.create(user=custom_user, **validated_data)
         for detail in details_data:
             OfferDetail.objects.create(offer=offer, **detail)
         return offer
+    
+    def update(self, instance, validated_data):
+        details_data = validated_data.pop('details', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if details_data is not None:
+            existing_details = {detail.offer_type: detail for detail in instance.details.all()}
+            update_offer_detail(self, details_data, existing_details, OfferDetailSerializer())
+        return instance
+
 
 
 class SingleOfferSerializer(serializers.ModelSerializer):
@@ -97,7 +111,7 @@ class OrderListCreateSerializer(serializers.ModelSerializer):
         try:
             offer_detail = OfferDetail.objects.get(pk=offer_detail_id)
         except OfferDetail.DoesNotExist:
-            raise serializers.ValidationError({"offer_detail_id": "OfferDetail not found."})
+            raise serializers.ValidationError({'offer_detail_id': 'OfferDetail not found.'})
         order = Order.objects.create(offer_detail=offer_detail, customer_user=customer_user, status='in_progress')
         return order
     
@@ -125,7 +139,7 @@ class CompletedOrderCountSerializer(serializers.Serializer):
     
 
 class ReviewSerializer(serializers.ModelSerializer):
-    business_user = serializers.IntegerField(source='business_user.id', required=True)
+    business_user = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all(), required=True)
     reviewer = serializers.IntegerField(source='reviewer.id', read_only=True)
     class Meta:
         model = Review
@@ -134,13 +148,11 @@ class ReviewSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context.get('request')
         reviewer = request.user.customuser
-        business_user_id = validated_data['business_user']['id']
-        try:
-            business_user = CustomUser.objects.get(pk=business_user_id)
-        except CustomUser.DoesNotExist:
-            raise serializers.ValidationError({"business_user": "Business user not found."})
+        business_user = validated_data['business_user']
         if business_user.type != 'business':
-            raise serializers.ValidationError({"business_user": "User is not a business user."})
+            raise serializers.ValidationError('Dieser User ist kein Business User.')
+        if Review.objects.filter(business_user=business_user, reviewer=reviewer).exists():
+            raise serializers.ValidationError('Sie haben diesen Business User bereits bewertet.')
         review = Review.objects.create(business_user=business_user, reviewer=reviewer, rating=validated_data['rating'], description=validated_data['description'])
         return review
     

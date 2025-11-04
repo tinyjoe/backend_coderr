@@ -1,5 +1,7 @@
 from django.db import models
 
+from auth_app.models import CustomUser
+
 
 OFFER_TYPE_CHOICES = [
     ('basic', 'Basic'),
@@ -45,11 +47,16 @@ class Order(models.Model):
 
 
 class Review(models.Model): 
-    business_user = models.ForeignKey('auth_app.CustomUser', on_delete=models.CASCADE, related_name='business_reviews')
-    reviewer = models.ForeignKey('auth_app.CustomUser', on_delete=models.CASCADE, related_name='given_reviews')
+    business_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='business_reviews')
+    reviewer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='given_reviews')
     rating = models.IntegerField()
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['business_user', 'reviewer'], name='unique_review_per_business_user')
+        ]
 
     

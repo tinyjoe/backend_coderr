@@ -22,14 +22,13 @@ class IsAuthenticatedOrCreatorOfOffer(permissions.BasePermission):
         if request.method == 'GET':
             return True
         if request.method == 'POST':
-            if hasattr(request.user, 'customuser') and getattr(request.user.customuser, 'type', None) == 'business':
-                return True
+            return hasattr(request.user, 'customuser') and getattr(request.user.customuser, 'type', None) == 'business'
         return True 
 
     def has_object_permission(self, request, view, obj):
-        if request.method in ['PATCH', 'DELETE']:
-            return obj.user == request.user
-        return True
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return obj.user == request.user.customuser
     
 
 class IsAuthenticatedOrCustomerUser(permissions.BasePermission):
