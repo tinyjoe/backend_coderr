@@ -5,13 +5,14 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import NotAuthenticated, NotFound, PermissionDenied
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Min, Avg
+from django.db.models import Min, Max, Avg
 
 from auth_app.models import CustomUser
 from coderr_app.models import Offer, OfferDetail, Order, Review
 from .serializers import OfferListSerializer, SingleOfferSerializer, OfferDetailSerializer, OfferCreateUpdateSerializer, OrderListCreateSerializer, OrderDetailSerializer, InProgressOrderCountSerializer, CompletedOrderCountSerializer, ReviewSerializer, ReviewDetailSerializer, BaseInfoSerializer
 from .permissions import IsBusinessUser, IsAuthenticatedOrCustomerUser, IsReviewAuthor, IsAuthenticatedOrCreatorOfOffer
 from .pagination import OfferPagination
+from .filters import OfferFilter
 from .handlers import handle_delete_review_permission_denied, handle_unauthenticated_access, handle_create_review_success, handle_create_review_failure, handle_unauthenticated_review_access, handle_permission_denied_review, handle_update_review_success, handle_update_review_failure, handle_update_review_permission_denied, handle_review_not_found, handle_delete_review_success, handle_create_order_success, handle_create_order_permission_denied, handle_offer_detail_not_found, handle_create_order_failure
 
 
@@ -20,15 +21,21 @@ class OfferListCreateView(generics.ListCreateAPIView):
     GET: View for receiving a list of filtered Offers.
     POST: Creates new instances of the Offer model with permission restrictions for business users.
     """
-    queryset = Offer.objects.all()
+    queryset = Offer.objects.all().annotate(
+        min_price=Min('details__price'),
+        max_delivery_time=Max('details__delivery_time_in_days')
+    )
     pagination_class = OfferPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['user', 'min_price', 'min_delivery_time']  
+    filterset_class = OfferFilter 
     search_fields = ['title', 'description']
     ordering_fields = ['updated_at', 'min_price']
     ordering = ['-updated_at']
 
     def get_serializer_class(self):
+        """
+        Uses different serializers for GET and POST requests.
+        """
         if self.request.method == 'POST':
             return OfferCreateUpdateSerializer
         return OfferListSerializer
@@ -43,6 +50,9 @@ class OfferListCreateView(generics.ListCreateAPIView):
         return [AllowAny()]
     
     def create(self, request, *args, **kwargs):
+        """
+        POST handler for creating a new Offer.
+        """
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         offer = serializer.save()
@@ -58,6 +68,9 @@ class SingleOfferView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticatedOrCreatorOfOffer]
 
     def get_serializer_class(self):
+        """
+        Uses different serializers for PATCH and GET requests.
+        """
         if self.request.method == 'PATCH':
             return OfferCreateUpdateSerializer
         return SingleOfferSerializer
@@ -132,6 +145,7 @@ class InProgressOrderCountView(generics.ListAPIView):
     """
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
+        """Retrieves the count of in-progress orders."""
         count = Order.objects.filter(status='in_progress').count()
         serializer = InProgressOrderCountSerializer({'order_count': count})
         return Response(serializer.data)
@@ -143,6 +157,7 @@ class CompletedOrderCountView(generics.ListAPIView):
     """
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
+        """Retrieves the count of completed orders."""
         count = Order.objects.filter(status='completed').count()
         serializer = CompletedOrderCountSerializer({'completed_order_count': count})
         return Response(serializer.data)
@@ -230,6 +245,7 @@ class BaseInfoView(APIView):
     serializer = BaseInfoSerializer
     permission_classes = [AllowAny]
     def get(self, request, *args, **kwargs):
+        """GET handler for retrieving base information statistics."""
         data = {
             "review_count": Review.objects.count(),
             "average_rating": Review.objects.aggregate(Avg('rating'))['rating__avg'],

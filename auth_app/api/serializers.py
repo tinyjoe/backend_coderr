@@ -20,9 +20,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def validate(self, attrs):
+        """
+        Validate registration data using custom validator.
+        """
         return validate_registration_data(attrs)
 
     def create(self, validated_data):
+        """
+        Create a new user using the service function.
+        """
         return create_user(validated_data)
     
 
@@ -48,6 +54,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = ['user', 'username', 'first_name', 'last_name', 'file', 'location', 'tel', 'description', 'working_hours', 'type', 'email', 'created_at']
 
     def update(self, instance, validated_data):
+        """
+        Update user profile information.
+        """
         user_data = validated_data.pop('user', {})
         if 'first_name' in user_data:
             instance.user.first_name = user_data['first_name']

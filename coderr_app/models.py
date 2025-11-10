@@ -1,8 +1,10 @@
 from django.db import models
-
 from auth_app.models import CustomUser
 
 
+"""
+Predefined choices for offer types.
+"""
 OFFER_TYPE_CHOICES = [
     ('basic', 'Basic'),
     ('standard', 'Standard'),
@@ -10,13 +12,20 @@ OFFER_TYPE_CHOICES = [
 ]
 
 
+"""
+Predefined choices for order states.
+"""
 ORDER_STATUS_CHOICES = [
     ('in_progress', 'In Progress'),
     ('completed', 'Completed'),
     ('cancelled', 'Cancelled'),
 ]
 
+
 class Offer(models.Model): 
+    """
+    Model representing an offer created by a business user.
+    """
     user = models.ForeignKey('auth_app.CustomUser', on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     image = models.ImageField(upload_to='offers/', blank=True, null=True)
@@ -28,6 +37,9 @@ class Offer(models.Model):
 
 
 class OfferDetail(models.Model):
+    """
+    Model representing detailed information about an offer.
+    """
     offer = models.ForeignKey(Offer, related_name='details', on_delete=models.CASCADE, null=True)
     title = models.CharField(max_length=255)
     revisions = models.IntegerField()
@@ -38,6 +50,9 @@ class OfferDetail(models.Model):
   
 
 class Order(models.Model): 
+    """
+    Model representing an order placed by a customer for an offer.
+    """
     customer_user = models.ForeignKey('auth_app.CustomUser', on_delete=models.CASCADE, related_name='customer_orders')
     business_user = models.ForeignKey('auth_app.CustomUser', on_delete=models.CASCADE, related_name='business_orders', null=True)
     offer_detail = models.ForeignKey(OfferDetail, on_delete=models.CASCADE, related_name='orders', null=True)
@@ -47,6 +62,9 @@ class Order(models.Model):
 
 
 class Review(models.Model): 
+    """
+    Model representing a review given by a customer to a business user.
+    """
     business_user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='business_reviews')
     reviewer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='given_reviews')
     rating = models.IntegerField()

@@ -1,6 +1,9 @@
 from rest_framework import serializers
 
 def validate_details(self, value):
+        """
+        Validates that the details field is a list containing exactly 3 OfferDetail objects.
+        """
         if not isinstance(value, list):
             raise serializers.ValidationError('Details need to be a list of OfferDetail objects.')
         if len(value) != 3:
@@ -8,6 +11,9 @@ def validate_details(self, value):
         return value
 
 def update_offer_detail(self, details_data, existing_details, serializer):
+        """
+        Updates existing OfferDetail instances based on the provided offer type and detail data.
+        """
         for detail_data in details_data:
             offer_type = detail_data.get('offer_type', None)
             if not offer_type:
