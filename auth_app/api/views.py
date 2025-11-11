@@ -7,7 +7,7 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from auth_app.models import CustomUser
 
 from .serializers import UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer, UserListSerializer
-from .handlers import get_registration_serializer, handle_customer_user_list_success, handle_registration_success, handle_invalid_credentials, handle_login_success, handle_unauthenticated_access, handle_profile_not_found, handle_profile_data_success, handle_profile_update_success, handle_forbidden_profile_access, handle_business_user_list_success
+from .handlers import get_registration_serializer, handle_registration_success, handle_invalid_credentials, handle_login_success, handle_unauthenticated_access, handle_profile_not_found, handle_profile_data_success, handle_profile_update_success, handle_forbidden_profile_access
 from .services import authenticate_user
 from .permissions import IsAuthenticatedOrOwnProfile
 
@@ -96,16 +96,6 @@ class BusinessUserListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserListSerializer
 
-    def get(self, request, *args, **kwargs):
-        """
-        GET-Handler for listing Business Users with different event handlers.
-        """
-        try:
-            response = super().get(request, *args, **kwargs)
-            return handle_business_user_list_success(self, response.data)
-        except NotAuthenticated:
-            return handle_unauthenticated_access(self)
-
 
 class CustomerUserListView(generics.ListAPIView):
     """
@@ -114,13 +104,3 @@ class CustomerUserListView(generics.ListAPIView):
     queryset = CustomUser.objects.filter(type='customer')
     permission_classes = [IsAuthenticated]
     serializer_class = UserListSerializer
-
-    def get(self, request, *args, **kwargs):
-        """
-        GET-Handler for listing Customer Users with different event handlers.
-        """
-        try:
-            response = super().get(request, *args, **kwargs)
-            return handle_customer_user_list_success(self, response.data)
-        except NotAuthenticated:
-            return handle_unauthenticated_access(self)

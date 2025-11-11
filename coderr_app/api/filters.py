@@ -19,10 +19,11 @@ class OfferFilter(filters.FilterSet):
         """
         Filters offers with a minimum price greater than or equal to value.
         """
-        return queryset.annotate(_min_price=Min('details__price')).filter(_min_price__gte=value)
+        return queryset.annotate(annotated_min_price=Min('details__price')).filter(_min_price__gte=value)
 
     def filter_max_delivery_time(self, queryset, name, value):
         """
         Filters offers with a maximum delivery time greater than or equal to value.
         """
-        return queryset.annotate(_max_delivery_time=Max('details__delivery_time_in_days')).filter(_max_delivery_time__gte=value)
+        return queryset.annotate(annotated_max_delivery_time=Max('details__delivery_time_in_days')).filter(_max_delivery_time__gte=value)
+    

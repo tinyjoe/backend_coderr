@@ -1,16 +1,16 @@
+from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Min, Max, Avg, Q
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, filters, viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import NotAuthenticated, NotFound, PermissionDenied
 from rest_framework.pagination import PageNumberPagination
-from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Min, Max, Avg
-
 from auth_app.models import CustomUser
 from coderr_app.models import Offer, OfferDetail, Order, Review
 from .serializers import OfferListSerializer, SingleOfferSerializer, OfferDetailSerializer, OfferCreateUpdateSerializer, OrderListCreateSerializer, OrderDetailSerializer, InProgressOrderCountSerializer, CompletedOrderCountSerializer, ReviewSerializer, ReviewDetailSerializer, BaseInfoSerializer
-from .permissions import IsBusinessUser, IsAuthenticatedOrCustomerUser, IsReviewAuthor, IsAuthenticatedOrCreatorOfOffer
+from .permissions import IsBusinessUser, IsAllowedToCreateOrUpdateOrDelete, IsReviewAuthor, IsAuthenticatedOrCreatorOfOffer
 from .pagination import OfferPagination
 from .filters import OfferFilter
 from .handlers import handle_delete_review_permission_denied, handle_unauthenticated_access, handle_create_review_success, handle_create_review_failure, handle_unauthenticated_review_access, handle_permission_denied_review, handle_update_review_success, handle_update_review_failure, handle_update_review_permission_denied, handle_review_not_found, handle_delete_review_success, handle_create_order_success, handle_create_order_permission_denied, handle_offer_detail_not_found, handle_create_order_failure
@@ -22,14 +22,14 @@ class OfferListCreateView(generics.ListCreateAPIView):
     POST: Creates new instances of the Offer model with permission restrictions for business users.
     """
     queryset = Offer.objects.all().annotate(
-        min_price=Min('details__price'),
-        max_delivery_time=Max('details__delivery_time_in_days')
+        annotated_min_price=Min('details__price'),
+        annotated_max_delivery_time=Max('details__delivery_time_in_days')
     )
     pagination_class = OfferPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = OfferFilter 
     search_fields = ['title', 'description']
-    ordering_fields = ['updated_at', 'min_price']
+    ordering_fields = ['updated_at', 'annotated_min_price']
     ordering = ['-updated_at']
 
     def get_serializer_class(self):
@@ -101,17 +101,15 @@ class OrderView(generics.ListCreateAPIView):
     """
     queryset = Order.objects.all()
     serializer_class = OrderListCreateSerializer
-    permission_classes = [IsAuthenticatedOrCustomerUser]
+    permission_classes = [IsAllowedToCreateOrUpdateOrDelete]
 
     def get(self, request, *args, **kwargs):
-        """GET handler for retrieving orders."""
-        try:
-            instance = self.get_object()
-            serializer = self.get_serializer(instance)
-            return Response(serializer.data)
-        except NotAuthenticated:
-            return handle_unauthenticated_access(self)
-        
+        """GET handler for retrieving orders where user is either customer_user or business_user of order."""
+        user = request.user.customuser
+        orders = Order.objects.filter(Q(customer_user=user) | Q(business_user=user))
+        serializer = self.get_serializer(orders, many=True)
+        return Response(serializer.data)
+
     def post(self, request, *args, **kwargs):
         """POST handler for creating a new order."""
         user = request.user
@@ -122,8 +120,6 @@ class OrderView(generics.ListCreateAPIView):
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
             return handle_create_order_success(self, serializer)
-        except PermissionDenied:
-            return handle_create_order_permission_denied(self)
         except request.data.order_detail_id.DoesNotExist:
             return handle_offer_detail_not_found(self)
         except Exception:
@@ -136,7 +132,7 @@ class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     queryset = Order.objects.all()
     serializer_class = OrderDetailSerializer
-    permission_classes = [IsAuthenticatedOrCustomerUser]
+    permission_classes = [IsAllowedToCreateOrUpdateOrDelete]
 
 
 class InProgressOrderCountView(generics.ListAPIView):
@@ -144,9 +140,12 @@ class InProgressOrderCountView(generics.ListAPIView):
     View for counting Orders with status 'in_progress'.
     """
     permission_classes = [IsAuthenticated]
+    lookup_field = 'pk'
     def get(self, request, *args, **kwargs):
         """Retrieves the count of in-progress orders."""
-        count = Order.objects.filter(status='in_progress').count()
+        user_id = self.kwargs.get('pk')
+        business_user = get_object_or_404(CustomUser, id=user_id, type='business')
+        count = Order.objects.filter(status='in_progress', offer_detail__offer__user__id=user_id).count()
         serializer = InProgressOrderCountSerializer({'order_count': count})
         return Response(serializer.data)
 
@@ -158,7 +157,9 @@ class CompletedOrderCountView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         """Retrieves the count of completed orders."""
-        count = Order.objects.filter(status='completed').count()
+        user_id = self.kwargs.get('pk')
+        business_user = get_object_or_404(CustomUser, id=user_id, type='business')
+        count = Order.objects.filter(status='completed',  offer_detail__offer__user__id=user_id).count()
         serializer = CompletedOrderCountSerializer({'completed_order_count': count})
         return Response(serializer.data)
 
@@ -169,7 +170,7 @@ class ReviewListCreateView(generics.ListCreateAPIView):
     """
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
-    permission_classes = [IsAuthenticatedOrCustomerUser]
+    permission_classes = [IsAllowedToCreateOrUpdateOrDelete]
     pagination_class = PageNumberPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['business_user_id', 'reviewer_id']

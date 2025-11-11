@@ -1,7 +1,6 @@
 from urllib import request
 from django.db import models
 from rest_framework import serializers
-
 from auth_app.models import CustomUser
 from coderr_app.models import Offer, OfferDetail, Order, Review
 from .services import update_offer_detail, validate_details
@@ -36,6 +35,22 @@ class NestedOfferDetailSerializer(serializers.HyperlinkedModelSerializer):
         Generate URL for the OfferDetail instance.
         """
         return f"/offerdetails/{obj.pk}/"
+    
+
+class NestedOfferDetailFullUrlSerializer(serializers.HyperlinkedModelSerializer):
+    """
+    Nested serializer for OfferDetail model with full URL field.
+    """
+    url = serializers.SerializerMethodField()
+    class Meta:
+        model = OfferDetail
+        fields = ['id', 'url']
+
+    def get_url(self, obj):
+        """
+        Generate URL for the OfferDetail instance.
+        """
+        return f"http://127.0.0.1:8000/api/offerdetails/{obj.pk}/"
 
 
 class UserShortInfoSerializer(serializers.ModelSerializer):
@@ -117,7 +132,7 @@ class SingleOfferSerializer(serializers.ModelSerializer):
     """
     Serializer for detailed view of a single Offer instance with nested offer details.
     """
-    details = NestedOfferDetailSerializer(many=True, read_only=True)
+    details = NestedOfferDetailFullUrlSerializer(many=True, read_only=True)
     class Meta:
         model = Offer 
         fields = ['id', 'user', 'title', 'image', 'description', 'created_at', 'updated_at', 'details', 'min_price', 'min_delivery_time', ]

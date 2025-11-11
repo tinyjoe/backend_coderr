@@ -31,11 +31,12 @@ class IsAuthenticatedOrCreatorOfOffer(permissions.BasePermission):
         return obj.user == request.user.customuser
     
 
-class IsAuthenticatedOrCustomerUser(permissions.BasePermission):
+class IsAllowedToCreateOrUpdateOrDelete(permissions.BasePermission):
     """
     Permissions: 
     GET: Any authenticated user.
-    POST/PATCH: Only users of type 'customer'.
+    POST: Only users of type 'customer'.
+    PATCH: Only users of type 'business'.
     DELETE: Only staff users.
     """
     def has_permission(self, request, view):
@@ -45,8 +46,11 @@ class IsAuthenticatedOrCustomerUser(permissions.BasePermission):
             return True
         if request.method == 'DELETE':
             return True
-        if request.method in ['POST', 'PATCH', 'PUT']:
+        if request.method == 'POST':
             if hasattr(request.user, 'customuser') and getattr(request.user.customuser, 'type', None) == 'customer':
+                return True
+        if request.method in ['PATCH', 'PUT']:
+            if hasattr(request.user, 'customuser') and getattr(request.user.customuser, 'type', None) == 'business':
                 return True
         return False
     

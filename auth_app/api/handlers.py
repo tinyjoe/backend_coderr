@@ -50,13 +50,3 @@ def handle_forbidden_profile_access(self):
     """Called when a user tries to access or modify another user's profile."""
     message = 'Authentifizierter Benutzer ist nicht der Eigentümer des Profils'
     return Response({'error': message}, status=status.HTTP_403_FORBIDDEN)
-
-def handle_business_user_list_success(self, serializer):
-    """Called when the list of business users is successfully retrieved."""
-    message = 'Die Liste der Business-Benutzer wurde erfolgreich abgerufen.'
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-def handle_customer_user_list_success(self, serializer):
-    """Called when the list of customer users is successfully retrieved."""
-    message = 'Die Liste der Kundenbenutzer wurde erfolgreich abgerufen.'
-    return Response(serializer.data, status=status.HTTP_200_OK)
