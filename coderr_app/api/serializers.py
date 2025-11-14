@@ -1,5 +1,6 @@
 from urllib import request
 from django.db import models
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from auth_app.models import CustomUser
 from coderr_app.models import Offer, OfferDetail, Order, Review
@@ -162,11 +163,9 @@ class OrderListCreateSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         customer_user = request.user.customuser
         offer_detail_id = validated_data.pop('offer_detail_id')
-        try:
-            offer_detail = OfferDetail.objects.get(pk=offer_detail_id)
-        except OfferDetail.DoesNotExist:
-            raise serializers.ValidationError({'offer_detail_id': 'OfferDetail not found.'})
-        order = Order.objects.create(offer_detail=offer_detail, customer_user=customer_user, status='in_progress')
+        offer_detail = get_object_or_404(OfferDetail, id=offer_detail_id)
+        business_user = offer_detail.offer.user
+        order = Order.objects.create(offer_detail=offer_detail, customer_user=customer_user, business_user=business_user, status='in_progress')
         return order
     
 
