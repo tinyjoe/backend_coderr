@@ -44,7 +44,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """
     Serializer for User Profile.
     """
-    user = serializers.IntegerField(source='id', required=False)
+    user = serializers.IntegerField(source='id', read_only=True)
     username = serializers.CharField(source='user.username', required=False)
     email = serializers.EmailField(source='user.email', required=False)
     first_name = serializers.CharField(source='user.first_name', required=False)
@@ -58,10 +58,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
         Update user profile information.
         """
         user_data = validated_data.pop('user', {})
-        if 'first_name' in user_data:
-            instance.user.first_name = user_data['first_name']
-        if 'last_name' in user_data:
-            instance.user.last_name = user_data['last_name']
+        for field, value in user_data.items():
+            setattr(instance.user, field, value)
         instance.user.save()
         return super().update(instance, validated_data)
 
