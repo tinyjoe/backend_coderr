@@ -71,25 +71,13 @@ class OfferListSerializer(serializers.ModelSerializer):
     Serializer for listing Offer instances with nested offer details and user info.
     """
     details = NestedOfferDetailSerializer(many=True, read_only=True)
-    min_price = serializers.SerializerMethodField()
-    min_delivery_time = serializers.SerializerMethodField()
+    min_price = serializers.IntegerField(source='min_price_agg', read_only=True)
+    min_delivery_time = serializers.IntegerField(source='min_delivery_agg', read_only=True)
     user_details = UserShortInfoSerializer(source="user", read_only=True)
     class Meta:
         model = Offer
         fields = ['id', 'user', 'title', 'image', 'description', 'created_at', 'updated_at', 'details', 'min_price', 'min_delivery_time', 'user_details']
-
-    def get_min_price(self, obj):
-        """
-        Calculate the minimum price from the related OfferDetail instances.
-        """
-        return obj.details.aggregate(models.Min('price'))['price__min']
-
-    def get_min_delivery_time(self, obj):
-        """
-        Calculate the minimum delivery time from the related OfferDetail instances.
-        """
-        return obj.details.aggregate(models.Min('delivery_time_in_days'))['delivery_time_in_days__min']
-    
+        
 
 class OfferCreateUpdateSerializer(serializers.ModelSerializer):
     """
@@ -134,9 +122,23 @@ class SingleOfferSerializer(serializers.ModelSerializer):
     Serializer for detailed view of a single Offer instance with nested offer details.
     """
     details = NestedOfferDetailFullUrlSerializer(many=True, read_only=True)
+    min_price = serializers.SerializerMethodField()
+    min_delivery_time = serializers.SerializerMethodField()
     class Meta:
         model = Offer 
         fields = ['id', 'user', 'title', 'image', 'description', 'created_at', 'updated_at', 'details', 'min_price', 'min_delivery_time', ]
+
+    def get_min_price(self, obj):
+        """
+        Calculate the minimum price from the related OfferDetail instances.
+        """
+        return obj.details.aggregate(models.Min('price'))['price__min']
+
+    def get_min_delivery_time(self, obj):
+        """
+        Calculate the minimum delivery time from the related OfferDetail instances.
+        """
+        return obj.details.aggregate(models.Min('delivery_time_in_days'))['delivery_time_in_days__min']
 
 
 class OrderListCreateSerializer(serializers.ModelSerializer):

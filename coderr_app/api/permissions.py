@@ -40,12 +40,15 @@ class IsAllowedToCreateOrUpdateOrDelete(permissions.BasePermission):
     DELETE: Only staff users.
     """
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
+        return request.user and request.user.is_authenticated
+    
+    
+    def has_object_permission(self, request, view, obj):
+        user = request.user
         if request.method == 'GET':
             return True
         if request.method == 'DELETE':
-            return True
+            return user.is_staff
         if request.method == 'POST':
             if hasattr(request.user, 'customuser') and getattr(request.user.customuser, 'type', None) == 'customer':
                 return True
@@ -54,15 +57,13 @@ class IsAllowedToCreateOrUpdateOrDelete(permissions.BasePermission):
                 return True
         return False
     
-    def has_object_permission(self, request, view, obj):
-        if request.method == 'DELETE':
-            return request.user.is_staff
-        return True
-    
 
 class IsReviewAuthor(permissions.BasePermission):
     """
     Allows access only to the author of the review.
     """
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+    
     def has_object_permission(self, request, view, obj):
         return obj.reviewer == request.user.customuser

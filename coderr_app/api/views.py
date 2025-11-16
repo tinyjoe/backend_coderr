@@ -21,7 +21,10 @@ class OfferListCreateView(generics.ListCreateAPIView):
     GET: View for receiving a list of filtered Offers.
     POST: Creates new instances of the Offer model with permission restrictions for business users.
     """
-    queryset = Offer.objects.all()
+    queryset = Offer.objects.annotate(
+        min_price_agg=Min("details__price"),
+        min_delivery_agg=Min("details__delivery_time_in_days"),
+    ).distinct()
     pagination_class = OfferPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = OfferFilter 

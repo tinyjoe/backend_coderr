@@ -8,8 +8,8 @@ class OfferFilter(filters.FilterSet):
     FilterSet for filtering Offer instances based on creator ID, minimum price, and maximum delivery time.
     """
     creator_id = filters.NumberFilter(field_name='user__id', lookup_expr='exact')
-    max_delivery_time = filters.NumberFilter(field_name='details__delivery_time_in_days', lookup_expr='gte')
-    min_price = filters.NumberFilter(field_name='details__price', lookup_expr='gte')
+    max_delivery_time = filters.NumberFilter(field_name='min_delivery_agg', lookup_expr='lte')
+    min_price = filters.NumberFilter(field_name='min_price_agg', lookup_expr='gte')
 
     class Meta:
         model = Offer
