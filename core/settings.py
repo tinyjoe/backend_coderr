@@ -109,7 +109,7 @@ REST_FRAMEWORK = {
 }
 
 # CORS / CSRF
-CORS_ALLOWED_ORIGINS = ['http://127.0.0.1:5500', 'http://coderr.tina-joelly.at']
+CORS_ALLOWED_ORIGINS = ['http://127.0.0.1:5500', 'https://coderr.tina-joelly.at']
 CSRF_TRUSTED_ORIGINS = ['https://tinajoelly.pythonanywhere.com']
 
 # Whitenoise storage for static files
