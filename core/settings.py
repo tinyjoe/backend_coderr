@@ -161,4 +161,4 @@ STORAGES = {
     },
 }
 
-DATABASES['default'] = dj_database_url.config(default=os.getenv('DATABASE_URL'))
+DATABASE_URL = 'postgres://postgres:postgres@localhost:5432/coderr_db'
