@@ -12,7 +12,7 @@ if os.path.exists(env_path):
     load_dotenv(env_path)
 
 # SECURITY
-SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-xm7^7lp1d6o&6%s6hbm+nya%zu7pe8kpz3@qio@pbvxn5zj_vx')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['tinajoelly.pythonanywhere.com', 'localhost', '127.0.0.1']
 
